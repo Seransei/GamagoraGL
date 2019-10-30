@@ -164,7 +164,7 @@ int main(void)
 	const size_t nParticules = 1000;
 	const auto particules = MakeParticules(nParticules);
 
-	const auto trianglesLogo = ReadStl("logo.stl");
+	auto trianglesLogo = ReadStl("logo.stl");
 
 	// Shader
 	const auto vertex = MakeShader(GL_VERTEX_SHADER, "shader.vert");
@@ -182,27 +182,20 @@ int main(void)
 
 	glBindVertexArray(vao);
 	glBindBuffer(GL_ARRAY_BUFFER, vbo);
-	glBufferData(GL_ARRAY_BUFFER, trianglesLogo.size() * sizeof(Triangle), trianglesLogo.data(), GL_STATIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, trianglesLogo.size() * sizeof(glm::vec3) * 3, trianglesLogo.data(), GL_STATIC_DRAW);
 
 	// Bindings
 
-	const auto indexV1 = glGetAttribLocation(program, "position");
-	const auto indexV2 = glGetAttribLocation(program, "position");
-	const auto indexV3 = glGetAttribLocation(program, "position");
+	const auto index = glGetAttribLocation(program, "position");
 
-	glVertexAttribPointer(indexV1, 3, GL_FLOAT, GL_FALSE, sizeof(Triangle), nullptr);
-	glVertexAttribPointer(indexV2, 3, GL_FLOAT, GL_FALSE, sizeof(Triangle), (void*)12);
-	glVertexAttribPointer(indexV3, 3, GL_FLOAT, GL_FALSE, sizeof(Triangle), (void*)24);
-
-	glEnableVertexAttribArray(indexV1);
-	glEnableVertexAttribArray(indexV2);
-	glEnableVertexAttribArray(indexV3);
+	glVertexAttribPointer(index, 3, GL_FLOAT, GL_FALSE, sizeof(glm::vec3), nullptr);
+	glEnableVertexAttribArray(index);
 
 	glPointSize(2.f);
 
-	int scale = 0.01f;
-	int uniformSize = glGetUniformLocation(program, "scale");
-	glProgramUniform1f(program, uniformSize, scale);
+	float scale = 0.01f;
+	int uniformScale = glGetUniformLocation(program, "scale");
+	glProgramUniform1f(program, uniformScale, scale);
 
 	while (!glfwWindowShouldClose(window))
 	{
