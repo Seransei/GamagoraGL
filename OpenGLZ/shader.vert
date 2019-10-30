@@ -3,9 +3,9 @@
 in vec3 position;
 in vec3 color;
 
-uniform float scale;
-
 out vec3 color_out;
+
+uniform float scale;
 
 void main()
 {

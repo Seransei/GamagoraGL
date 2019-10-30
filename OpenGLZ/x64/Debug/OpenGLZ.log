@@ -1,2 +1,5 @@
 ﻿  main.cpp
+D:\work\SynthIm\GamagoraGL\OpenGLZ\main.cpp(203): warning C4244: 'initialisation' : conversion de 'float' en 'int', perte possible de données
+D:\work\SynthIm\GamagoraGL\OpenGLZ\main.cpp(205): warning C4244: 'argument' : conversion de 'int' en 'GLfloat', perte possible de données
+D:\work\SynthIm\GamagoraGL\OpenGLZ\main.cpp(217): warning C4267: 'argument' : conversion de 'size_t' en 'GLsizei', perte possible de données
   OpenGLZ.vcxproj -> D:\work\SynthIm\GamagoraGL\x64\Debug\OpenGLZ.exe

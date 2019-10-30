@@ -1,4 +1,5 @@
 #include <glad/glad.h>
+#include "stl.h"
 #include <GLFW/glfw3.h>
 #include <glm/vec3.hpp>
 
@@ -163,6 +164,8 @@ int main(void)
 	const size_t nParticules = 1000;
 	const auto particules = MakeParticules(nParticules);
 
+	const auto trianglesLogo = ReadStl("logo.stl");
+
 	// Shader
 	const auto vertex = MakeShader(GL_VERTEX_SHADER, "shader.vert");
 	const auto fragment = MakeShader(GL_FRAGMENT_SHADER, "shader.frag");
@@ -171,37 +174,38 @@ int main(void)
 
 	glUseProgram(program);
 
-
 	// Buffers
+	
 	GLuint vbo, vao;
 	glGenBuffers(1, &vbo);
 	glGenVertexArrays(1, &vao);
 
 	glBindVertexArray(vao);
 	glBindBuffer(GL_ARRAY_BUFFER, vbo);
-	glBufferData(GL_ARRAY_BUFFER, nParticules * sizeof(Particule), particules.data(), GL_STATIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, trianglesLogo.size() * sizeof(Triangle), trianglesLogo.data(), GL_STATIC_DRAW);
 
 	// Bindings
-	const auto indexPos = glGetAttribLocation(program, "position");
 
-	glVertexAttribPointer(indexPos, 3, GL_FLOAT, GL_FALSE, sizeof(Particule), nullptr);
-	glEnableVertexAttribArray(indexPos);
+	const auto indexV1 = glGetAttribLocation(program, "position");
+	const auto indexV2 = glGetAttribLocation(program, "position");
+	const auto indexV3 = glGetAttribLocation(program, "position");
 
-	const auto indexCol = glGetAttribLocation(program, "color");
+	glVertexAttribPointer(indexV1, 3, GL_FLOAT, GL_FALSE, sizeof(Triangle), nullptr);
+	glVertexAttribPointer(indexV2, 3, GL_FLOAT, GL_FALSE, sizeof(Triangle), (void*)12);
+	glVertexAttribPointer(indexV3, 3, GL_FLOAT, GL_FALSE, sizeof(Triangle), (void*)24);
 
-	glVertexAttribPointer(indexCol, 3, GL_FLOAT, GL_FALSE, sizeof(Particule), (void*)12);
-	glEnableVertexAttribArray(indexCol);
+	glEnableVertexAttribArray(indexV1);
+	glEnableVertexAttribArray(indexV2);
+	glEnableVertexAttribArray(indexV3);
 
 	glPointSize(2.f);
 
-	int scaleCount = 0;
+	int scale = 0.01f;
+	int uniformSize = glGetUniformLocation(program, "scale");
+	glProgramUniform1f(program, uniformSize, scale);
 
 	while (!glfwWindowShouldClose(window))
 	{
-		scaleCount = (scaleCount + 1) % 100;
-		int uniformSize = glGetUniformLocation(program, "scale");
-		glProgramUniform1f(program, uniformSize, (float)(scaleCount / 100.0f));
-
 		int width, height;
 		glfwGetFramebufferSize(window, &width, &height);
 
@@ -210,7 +214,7 @@ int main(void)
 		glClear(GL_COLOR_BUFFER_BIT);
 		// glClearColor(1.0f, 0.0f, 0.0f, 1.0f);
 
-		glDrawArrays(GL_POINTS, 0, nParticules);
+		glDrawArrays(GL_TRIANGLES, 0, trianglesLogo.size() * 3);
 
 		glfwSwapBuffers(window);
 		glfwPollEvents();
