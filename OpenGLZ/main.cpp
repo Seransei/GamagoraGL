@@ -1,7 +1,10 @@
 #include <glad/glad.h>
 #include "stl.h"
 #include <GLFW/glfw3.h>
+
 #include <glm/vec3.hpp>
+#include <glm/glm.hpp>
+#include <glm/gtx/transform.hpp>
 
 #include <vector>
 #include <iostream>
@@ -9,9 +12,54 @@
 #include <sstream>
 #include <fstream>
 #include <string>
+#include <cmath>
 
 #define TINYPLY_IMPLEMENTATION
 #include <tinyply.h>
+
+#define M_PI 3.1415926535897932384626433832795f
+
+GLFWwindow* window;
+int width, height;
+
+double cursorX, cursorY;
+
+//----CAMERA----
+float
+	radius = 10.f,
+	phi = M_PI / 2,
+	theta = 0.f;
+glm::vec3 camPos = glm::vec3(0.f, 0.f, radius);
+glm::mat4 
+	lookAt = glm::mat4(1.0),
+	perspective = glm::perspective(M_PI / 2, 1.f, 1.f, 10000.f);
+
+//----TRANSLATE----
+float
+	dx = 0.f,
+	dy = 0.f,
+	dz = 0.f;
+glm::mat4 translateMatrix = glm::mat4(1.0);
+
+//----SCALE----
+float
+	scaleX = 0.1f,
+	scaleY = 0.1f,
+	scaleZ = 0.1f;
+glm::mat4 scaleMatrix = glm::mat4(1.0);
+
+//----ROTATE----
+float
+	rotX = 0.f,
+	rotY = 0.f,
+	rotZ = 0.f;
+glm::mat4
+	rotMatX = glm::mat4(1.0),
+	rotMatY = glm::mat4(1.0),
+	rotMatZ = glm::mat4(1.0),
+	rotationMatrix = glm::mat4(1.0);
+
+glm::mat4 transformMatrix = glm::mat4(1.0);
 
 static void error_callback(int /*error*/, const char* description)
 {
@@ -22,6 +70,17 @@ static void key_callback(GLFWwindow* window, int key, int /*scancode*/, int acti
 {
 	if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
 		glfwSetWindowShouldClose(window, GLFW_TRUE);
+}
+
+void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
+{
+	radius += yoffset;
+}
+
+static void cursor_position_callback(GLFWwindow* window, double xpos, double ypos)
+{
+	theta += xpos * 0.0001f;
+	phi += ypos * 0.0001f;
 }
 
 /* PARTICULES */
@@ -128,9 +187,9 @@ void APIENTRY opengl_error_callback(GLenum source,
 	std::cout << message << std::endl;
 }
 
+
 int main(void)
 {
-	GLFWwindow* window;
 	glfwSetErrorCallback(error_callback);
 
 	if (!glfwInit())
@@ -160,10 +219,7 @@ int main(void)
 
 	// Callbacks
 	glDebugMessageCallback(opengl_error_callback, nullptr);
-
-	const size_t nParticules = 1000;
-	const auto particules = MakeParticules(nParticules);
-
+	
 	auto trianglesLogo = ReadStl("logo.stl");
 
 	// Shader
@@ -193,16 +249,51 @@ int main(void)
 
 	glPointSize(2.f);
 
-	float scale = 0.01f;
-	int uniformScale = glGetUniformLocation(program, "scale");
-	glProgramUniform1f(program, uniformScale, scale);
-
 	while (!glfwWindowShouldClose(window))
 	{
-		int width, height;
 		glfwGetFramebufferSize(window, &width, &height);
 
 		glViewport(0, 0, width, height);
+
+		//--Camera distance--
+		glfwSetScrollCallback(window, scroll_callback);
+		//-------------------
+
+		//--Camera rotation--
+		double 
+			oldCursorX = cursorX, 
+			oldCursorY = cursorY;
+		glfwGetCursorPos(window, &cursorX, &cursorY);//update cursor pos
+
+		theta += (cursorX - oldCursorX) * 0.001f;
+		phi += (oldCursorY - cursorY) * 0.001f;
+
+		camPos = glm::vec3(radius * sin(phi) * cos(theta) , radius * cos(phi), radius * sin(phi) * sin(theta));
+		lookAt = glm::lookAt(camPos, glm::vec3(0, 0, 0), glm::vec3(0, 1, 0));
+		//-------------------
+
+		//--Object transformations--
+		translateMatrix = glm::translate(glm::vec3(dx, dy, dz));
+
+		scaleMatrix = glm::scale(glm::vec3(scaleX, scaleY, scaleZ));
+
+		rotMatX = glm::rotate(rotX, glm::vec3(1, 0, 0));
+		rotMatY = glm::rotate(rotY, glm::vec3(0, 1, 0));
+		rotMatZ = glm::rotate(rotZ, glm::vec3(0, 0, 1));
+		rotationMatrix = rotMatX * rotMatY * rotMatZ;
+
+		transformMatrix = rotationMatrix * translateMatrix * scaleMatrix;
+		//--------------------------
+
+		int uniformLookAt = glGetUniformLocation(program, "lookAt");
+		glProgramUniformMatrix4fv(program, uniformLookAt, 1, GL_FALSE, &lookAt[0][0]);
+
+		int uniformPers = glGetUniformLocation(program, "perspective");
+		glProgramUniformMatrix4fv(program, uniformPers, 1, GL_FALSE, &perspective[0][0]);
+
+		int uniformTransform = glGetUniformLocation(program, "transformMatrix");
+		glProgramUniformMatrix4fv(program, uniformTransform, 1, GL_FALSE, &transformMatrix[0][0]);
+
 
 		glClear(GL_COLOR_BUFFER_BIT);
 		// glClearColor(1.0f, 0.0f, 0.0f, 1.0f);
