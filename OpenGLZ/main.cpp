@@ -312,16 +312,20 @@ int main(void)
 	glVertexAttribPointer(indexUV, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)12);
 	glEnableVertexAttribArray(indexUV);
 
-	glPointSize(2.f);
-
+	// Uniforms
 	int uniformLookAt = glGetUniformLocation(program, "lookAt");
 	int uniformPers = glGetUniformLocation(program, "perspective");
 	int uniformTransform = glGetUniformLocation(program, "transformMatrix");
 	int uniformTexture = glGetUniformLocation(program, "text");
 	glProgramUniform1i(program, uniformTexture, 0);
 
-	glfwGetCursorPos(window, &cursorX, &cursorY);//update cursor pos
+	// Frame buffers
+	GLuint frameBufferID = 1;
+	glCreateFramebuffers(1, &frameBufferID);
+	glNamedFramebufferDrawBuffers(frameBufferID, 1, );
 
+	glfwGetCursorPos(window, &cursorX, &cursorY);//update cursor pos
+	glPointSize(2.f);
 	glEnable(GL_DEPTH_TEST);
 	while (!glfwWindowShouldClose(window))
 	{
