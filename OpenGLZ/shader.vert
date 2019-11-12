@@ -1,14 +1,12 @@
 #version 450
 
 in vec3 position;
-in vec3 color;
+in vec2 uv;
 
-out vec3 color_out;
+out vec2 uv_out;
 
 uniform mat4 lookAt;
-
 uniform mat4 perspective;
-
 uniform mat4 transformMatrix;
 
 void main()
@@ -17,7 +15,7 @@ void main()
 		perspective *
 		lookAt * 
 		transformMatrix * 
-		vec4(position, 1.0);
+		vec4(position * 2 - 1, 1.0);
 
-	color_out = color;
+	uv_out = uv;
 }

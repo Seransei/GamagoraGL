@@ -1,6 +1,7 @@
 #include <glad/glad.h>
 #include "stl.h"
 #include <GLFW/glfw3.h>
+#include "texture.h"
 
 #include <glm/vec3.hpp>
 #include <glm/glm.hpp>
@@ -43,9 +44,9 @@ glm::mat4 translateMatrix = glm::mat4(1.0);
 
 //----SCALE----
 float
-	scaleX = 0.1f,
-	scaleY = 0.1f,
-	scaleZ = 0.1f;
+	scaleX = 10.f,
+	scaleY = 10.f,
+	scaleZ = 10.f;
 glm::mat4 scaleMatrix = glm::mat4(1.0);
 
 //----ROTATE----
@@ -88,6 +89,13 @@ struct Particule {
 	glm::vec3 position;
 	glm::vec3 color;
 	glm::vec3 speed;
+};
+
+/* POINTS */
+struct Point 
+{
+	glm::vec3 position;
+	glm::vec2 uv;
 };
 
 std::vector<Particule> MakeParticules(const int n)
@@ -219,8 +227,6 @@ int main(void)
 
 	// Callbacks
 	glDebugMessageCallback(opengl_error_callback, nullptr);
-	
-	auto trianglesLogo = ReadStl("logo.stl");
 
 	// Shader
 	const auto vertex = MakeShader(GL_VERTEX_SHADER, "shader.vert");
@@ -230,25 +236,74 @@ int main(void)
 
 	glUseProgram(program);
 
+	// Objects
+	std::vector<Triangle> triangles = ReadStl("logo.stl");
+	std::vector<Point> points
+	{
+		{
+			{0, 0, 0},
+			{0, 0}
+		},
+		{
+			{0, 1, 0},
+			{0, 1}
+		},
+		{
+			{1, 0, 0},
+			{1, 0}
+		},
+		{
+			{1, 0, 0},
+			{1, 0}
+		},
+		{
+			{1, 1, 0},
+			{1, 1}
+		},
+		{
+			{0, 1, 0},
+			{0, 1}
+		}
+	};
+
+	// Textures
+	Image bmp = LoadImage("wood.bmp");
+	GLuint textureID = 1;
+
+	glCreateTextures(GL_TEXTURE_2D, 1, &textureID);
+	glTextureStorage2D(textureID, 1, GL_RGB8, 512, 512);
+	glTextureSubImage2D(textureID, 0, 0, 0, 512, 512, GL_RGB, GL_UNSIGNED_BYTE, bmp.data.data());
+
+	glBindTextureUnit(0, textureID);
+
 	// Buffers
-	
 	GLuint vbo, vao;
 	glGenBuffers(1, &vbo);
 	glGenVertexArrays(1, &vao);
 
 	glBindVertexArray(vao);
 	glBindBuffer(GL_ARRAY_BUFFER, vbo);
-	glBufferData(GL_ARRAY_BUFFER, trianglesLogo.size() * sizeof(glm::vec3) * 3, trianglesLogo.data(), GL_STATIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, points.size() * sizeof(Point), points.data(), GL_STATIC_DRAW);
 
 	// Bindings
+	const auto indexPos = glGetAttribLocation(program, "position");
+	glVertexAttribPointer(indexPos, 3, GL_FLOAT, GL_FALSE, sizeof(glm::vec3) + sizeof(glm::vec2), nullptr);
+	glEnableVertexAttribArray(indexPos);
 
-	const auto index = glGetAttribLocation(program, "position");
 
-	glVertexAttribPointer(index, 3, GL_FLOAT, GL_FALSE, sizeof(glm::vec3), nullptr);
-	glEnableVertexAttribArray(index);
+	const auto indexUV = glGetAttribLocation(program, "uv");
+	glVertexAttribPointer(indexUV, 2, GL_FLOAT, GL_FALSE, sizeof(glm::vec3) + sizeof(glm::vec2), (void*)12);
+	glEnableVertexAttribArray(indexUV);
 
 	glPointSize(2.f);
 
+	int uniformLookAt = glGetUniformLocation(program, "lookAt");
+	int uniformTransform = glGetUniformLocation(program, "transformMatrix");
+	int uniformPers = glGetUniformLocation(program, "perspective");
+	int uniformTexture = glGetUniformLocation(program, "text");
+	glProgramUniform1i(program, uniformTexture, 0);
+
+	glfwGetCursorPos(window, &cursorX, &cursorY);//update cursor pos
 	while (!glfwWindowShouldClose(window))
 	{
 		glfwGetFramebufferSize(window, &width, &height);
@@ -265,7 +320,7 @@ int main(void)
 			oldCursorY = cursorY;
 		glfwGetCursorPos(window, &cursorX, &cursorY);//update cursor pos
 
-		theta += (cursorX - oldCursorX) * 0.001f;
+		theta += (oldCursorX - cursorX) * 0.001f;
 		phi += (oldCursorY - cursorY) * 0.001f;
 
 		camPos = glm::vec3(radius * sin(phi) * cos(theta) , radius * cos(phi), radius * sin(phi) * sin(theta));
@@ -285,20 +340,16 @@ int main(void)
 		transformMatrix = rotationMatrix * translateMatrix * scaleMatrix;
 		//--------------------------
 
-		int uniformLookAt = glGetUniformLocation(program, "lookAt");
 		glProgramUniformMatrix4fv(program, uniformLookAt, 1, GL_FALSE, &lookAt[0][0]);
 
-		int uniformPers = glGetUniformLocation(program, "perspective");
 		glProgramUniformMatrix4fv(program, uniformPers, 1, GL_FALSE, &perspective[0][0]);
 
-		int uniformTransform = glGetUniformLocation(program, "transformMatrix");
 		glProgramUniformMatrix4fv(program, uniformTransform, 1, GL_FALSE, &transformMatrix[0][0]);
 
-
+		//glClearColor(1.0f, 0.0f, 0.0f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT);
-		// glClearColor(1.0f, 0.0f, 0.0f, 1.0f);
 
-		glDrawArrays(GL_TRIANGLES, 0, trianglesLogo.size() * 3);
+		glDrawArrays(GL_TRIANGLES, 0, triangles.size() * 3);
 
 		glfwSwapBuffers(window);
 		glfwPollEvents();
