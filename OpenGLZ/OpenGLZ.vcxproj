@@ -77,6 +77,7 @@
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>D:\OpenGL\OpenGLZ\OpenGLZ\glm\;D:\OpenGL\OpenGLZ\OpenGLZ\CImg\include;D:\OpenGL\OpenGLZ\OpenGLZ\glad\include;D:\OpenGL\OpenGLZ\OpenGLZ\glfw\include;D:\OpenGL\OpenGLZ\OpenGLZ\tinyply\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>_MBCS;%(PreprocessorDefinitions);_CRT_SECURE_NO_WARNINGS</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -91,6 +92,7 @@
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>$(ProjectDir)\glad\include;$(ProjectDir)\CImg\include;$(ProjectDir)\glfw\include;$(ProjectDir)\glm;$(ProjectDir)\tinyply\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>_MBCS;%(PreprocessorDefinitions);_CRT_SECURE_NO_WARNINGS</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -107,6 +109,7 @@
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>D:\OpenGL\OpenGLZ\OpenGLZ\glm\;D:\OpenGL\OpenGLZ\OpenGLZ\CImg\include;D:\OpenGL\OpenGLZ\OpenGLZ\glad\include;D:\OpenGL\OpenGLZ\OpenGLZ\glfw\include;D:\OpenGL\OpenGLZ\OpenGLZ\tinyply\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>_MBCS;%(PreprocessorDefinitions);_CRT_SECURE_NO_WARNINGS</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -125,6 +128,7 @@
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>$(ProjectDir)\glad\include;$(ProjectDir)\CImg\include;$(ProjectDir)\glfw\include;$(ProjectDir)\glm;$(ProjectDir)\tinyply\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>_MBCS;%(PreprocessorDefinitions);_CRT_SECURE_NO_WARNINGS</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -137,10 +141,12 @@
   <ItemGroup>
     <ClCompile Include="glad\src\glad.c" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="OBJLoader.cpp" />
     <ClCompile Include="stl.cpp" />
     <ClCompile Include="texture.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="OBJLoader.h" />
     <ClInclude Include="stl.h" />
     <ClInclude Include="texture.h" />
   </ItemGroup>
