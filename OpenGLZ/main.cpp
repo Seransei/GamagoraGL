@@ -285,13 +285,18 @@ int main(void)
 
 	// Textures
 	Image bmp = LoadImage("wood.bmp");
-	GLuint textureID = 1;
+	GLuint woodTextureID;
+	glCreateTextures(GL_TEXTURE_2D, 1, &woodTextureID);
+	glTextureStorage2D(woodTextureID, 1, GL_RGB8, bmp.width, bmp.height);
+	glTextureSubImage2D(woodTextureID, 0, 0, 0, bmp.width, bmp.height, GL_RGB, GL_UNSIGNED_BYTE, bmp.data.data());
 
-	glCreateTextures(GL_TEXTURE_2D, 1, &textureID);
-	glTextureStorage2D(textureID, 1, GL_RGB8, bmp.width, bmp.height);
-	glTextureSubImage2D(textureID, 0, 0, 0, bmp.width, bmp.height, GL_RGB, GL_UNSIGNED_BYTE, bmp.data.data());
+	GLuint frameColorTextureID;
+	glCreateTextures(GL_TEXTURE_2D, 1, &frameColorTextureID);
+	glTextureStorage2D(frameColorTextureID, 1, GL_RGB8, 100, 100);
 
-	glBindTextureUnit(0, textureID);
+	GLuint frameDepthTextureID;
+	glCreateTextures(GL_TEXTURE_2D, 1, &frameDepthTextureID);
+	glTextureStorage2D(frameDepthTextureID, 1, GL_DEPTH_COMPONENT24, 100, 100);
 
 	// Buffers
 	GLuint vbo, vao;
@@ -322,11 +327,11 @@ int main(void)
 	// Frame buffers
 	GLenum gl_color_attachment0[] = { (GLenum)GL_COLOR_ATTACHMENT0 };
 
-	GLuint frameBufferID = 1;
+	GLuint frameBufferID;
 	glCreateFramebuffers(1, &frameBufferID);	
-	glNamedFramebufferTexture(frameBufferID, GL_COLOR_ATTACHMENT0, textureID, 0);
+	glNamedFramebufferTexture(frameBufferID, GL_COLOR_ATTACHMENT0, frameColorTextureID, 0);
+	glNamedFramebufferTexture(frameBufferID, GL_DEPTH_ATTACHMENT, frameDepthTextureID, 0);
 	glNamedFramebufferDrawBuffers(frameBufferID, 1, gl_color_attachment0);
-	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, frameBufferID);
 
 	GLenum fbStatus = glCheckNamedFramebufferStatus(frameBufferID, GL_FRAMEBUFFER);
 
@@ -368,10 +373,6 @@ int main(void)
 	glEnable(GL_DEPTH_TEST);
 	while (!glfwWindowShouldClose(window))
 	{
-		glfwGetFramebufferSize(window, &width, &height);
-
-		glViewport(0, 0, width, height);
-
 		//--Camera distance--
 		glfwSetScrollCallback(window, scroll_callback);
 		//-------------------
@@ -403,12 +404,28 @@ int main(void)
 		//--------------------------
 
 		glProgramUniformMatrix4fv(program, uniformLookAt, 1, GL_FALSE, &lookAt[0][0]);
-
 		glProgramUniformMatrix4fv(program, uniformPers, 1, GL_FALSE, &perspective[0][0]);
-
 		glProgramUniformMatrix4fv(program, uniformTransform, 1, GL_FALSE, &transformMatrix[0][0]);
 
-		//glClearColor(1.0f, 0.0f, 0.0f, 1.0f);
+		//--Dessine sur le framebuffer cache--
+		glBindFramebuffer(GL_DRAW_FRAMEBUFFER, frameBufferID);
+
+		glViewport(0, 0, 100, 100);
+
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+		glBindTextureUnit(0, woodTextureID);
+		
+		glDrawArrays(GL_TRIANGLES, 0, triangles.size() * 3);
+
+		//----Dessine a l'ecran----
+		glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+
+		glfwGetFramebufferSize(window, &width, &height);
+		glViewport(0, 0, width, height);
+
+		glBindTextureUnit(0, frameColorTextureID);
+
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 		glDrawArrays(GL_TRIANGLES, 0, triangles.size() * 3);
