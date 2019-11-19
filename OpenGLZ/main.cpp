@@ -24,11 +24,13 @@ GLFWwindow* window;
 int width, height;
 int frameWidth = 500, frameHeight = 500;
 
-double cursorX, cursorY;
+double 
+	oldCursorX, oldCursorY,
+	cursorX, cursorY;
 
 //----CAMERA----
 float
-	radius = 10.f,
+	radius = 200.f,
 	phi = M_PI / 2,
 	theta = 0.f;
 glm::vec3 camPos = glm::vec3(0.f, 0.f, radius);
@@ -276,6 +278,8 @@ int main(void)
 	
 	std::vector<Vertex> cubeVert;
 
+	std::cout << verticesOBJ.size() << " " << uvsOBJ.size() << std::endl;
+
 	for(unsigned int i = 0; i < verticesOBJ.size(); i++)
 	{
 		cubeVert.push_back({
@@ -323,10 +327,9 @@ int main(void)
 	int uniformPers = glGetUniformLocation(program, "perspective");
 	int uniformTransform = glGetUniformLocation(program, "transformMatrix");
 	int uniformTexture = glGetUniformLocation(program, "text");
-	glProgramUniform1i(program, uniformTexture, 0);
 
 	// Frame buffers
-	GLenum gl_color_attachment0[] = { (GLenum)GL_COLOR_ATTACHMENT0 };
+	GLenum gl_color_attachment0[] = { GL_COLOR_ATTACHMENT0 };
 
 	GLuint frameBufferID;
 	glCreateFramebuffers(1, &frameBufferID);
@@ -369,67 +372,82 @@ int main(void)
 		break;
 	}
 
+	// Light point
+	glm::vec3 lightPos = {100, 0, 0};
+
 	glfwGetCursorPos(window, &cursorX, &cursorY);//update cursor pos
 	glPointSize(2.f);
 	glEnable(GL_DEPTH_TEST);
 	while (!glfwWindowShouldClose(window))
 	{
-		//--Camera distance--
-		glfwSetScrollCallback(window, scroll_callback);
-		//-------------------
-
-		//--Camera rotation--
-		double 
-			oldCursorX = cursorX, 
-			oldCursorY = cursorY;
-		glfwGetCursorPos(window, &cursorX, &cursorY);//update cursor pos
-
-		theta += (oldCursorX - cursorX) * 0.001f;
-		phi += (oldCursorY - cursorY) * 0.001f;
-
-		camPos = glm::vec3(radius * sin(phi) * cos(theta) , radius * cos(phi), radius * sin(phi) * sin(theta));
-		lookAt = glm::lookAt(camPos, glm::vec3(0, 0, 0), glm::vec3(0, 1, 0));
-		//-------------------
-
-		//--Object transformations--
-		translateMatrix = glm::translate(glm::vec3(dx, dy, dz));
-
-		scaleMatrix = glm::scale(glm::vec3(scaleX, scaleY, scaleZ));
-
-		rotMatX = glm::rotate(rotX, glm::vec3(1, 0, 0));
-		rotMatY = glm::rotate(rotY, glm::vec3(0, 1, 0));
-		rotMatZ = glm::rotate(rotZ, glm::vec3(0, 0, 1));
-		rotationMatrix = rotMatX * rotMatY * rotMatZ;
-
-		transformMatrix = rotationMatrix * translateMatrix * scaleMatrix;
-		//--------------------------
-
-		glProgramUniformMatrix4fv(program, uniformLookAt, 1, GL_FALSE, &lookAt[0][0]);
-		glProgramUniformMatrix4fv(program, uniformPers, 1, GL_FALSE, &perspective[0][0]);
-		glProgramUniformMatrix4fv(program, uniformTransform, 1, GL_FALSE, &transformMatrix[0][0]);
-
-		//----Dessine sur le framebuffer cache----
-		glBindFramebuffer(GL_DRAW_FRAMEBUFFER, frameBufferID);
-
-		glViewport(0, 0, frameWidth, frameHeight);
-
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-		glBindTextureUnit(0, woodTextureID);
-		
-		glDrawArrays(GL_TRIANGLES, 0, cubeVert.size());
-
-		//----Dessine a l'ecran----
-		glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
-
 		glfwGetFramebufferSize(window, &width, &height);
 		glViewport(0, 0, width, height);
-
-		glBindTextureUnit(0, frameColorTextureID);
-
+		glBindTextureUnit(0, woodTextureID);
+		glClearColor(0.2f, 0.2f, 0.2f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-		glDrawArrays(GL_TRIANGLES, 0, cubeVert.size());
+		// Camera
+		{
+			//--Camera distance--
+			glfwSetScrollCallback(window, scroll_callback);
+			//-------------------
+
+			//--Camera rotation--
+			oldCursorX = cursorX,
+				oldCursorY = cursorY;
+			glfwGetCursorPos(window, &cursorX, &cursorY);//update cursor pos
+
+			theta += (oldCursorX - cursorX) * 0.001f;
+			phi += (oldCursorY - cursorY) * 0.001f;
+
+			camPos = glm::vec3(radius * sin(phi) * cos(theta), radius * cos(phi), radius * sin(phi) * sin(theta));
+			lookAt = glm::lookAt(camPos, glm::vec3(0, 0, 0), glm::vec3(0, 1, 0));
+
+			glProgramUniformMatrix4fv(program, uniformLookAt, 1, GL_FALSE, &lookAt[0][0]);
+			glProgramUniformMatrix4fv(program, uniformPers, 1, GL_FALSE, &perspective[0][0]);
+		}
+
+		// Object 1
+		{
+			//--Object transformations--
+			translateMatrix = glm::translate(glm::vec3(dx - 30, dy, dz));
+
+			scaleMatrix = glm::scale(glm::vec3(scaleX + 2, scaleY + 2, scaleZ + 2));
+
+			rotMatX = glm::rotate(rotX, glm::vec3(1, 0, 0));
+			rotMatY = glm::rotate(rotY, glm::vec3(0, 1, 0));
+			rotMatZ = glm::rotate(rotZ, glm::vec3(0, 0, 1));
+			rotationMatrix = rotMatX * rotMatY * rotMatZ;
+
+			transformMatrix = rotationMatrix * translateMatrix * scaleMatrix;
+			//--------------------------
+
+			glProgramUniformMatrix4fv(program, uniformTransform, 1, GL_FALSE, &transformMatrix[0][0]);
+			glProgramUniform1i(program, uniformTexture, 0);
+
+			glDrawArrays(GL_TRIANGLES, 0, cubeVert.size());
+		}
+
+		// Object 2
+		{		
+			//--Object transformations--
+			translateMatrix = glm::translate(glm::vec3(dx + 25, dy, dz));
+
+			scaleMatrix = glm::scale(glm::vec3(scaleX, scaleY, scaleZ));
+
+			rotMatX = glm::rotate(rotX, glm::vec3(1, 0, 0));
+			rotMatY = glm::rotate(rotY, glm::vec3(0, 1, 0));
+			rotMatZ = glm::rotate(rotZ, glm::vec3(0, 0, 1));
+			rotationMatrix = rotMatX * rotMatY * rotMatZ;
+
+			transformMatrix = rotationMatrix * translateMatrix * scaleMatrix;
+			//--------------------------
+
+			glProgramUniformMatrix4fv(program, uniformTransform, 1, GL_FALSE, &transformMatrix[0][0]);
+			glProgramUniform1i(program, uniformTexture, 0);
+
+			glDrawArrays(GL_TRIANGLES, 0, cubeVert.size());
+		}
 
 		glfwSwapBuffers(window);
 		glfwPollEvents();
