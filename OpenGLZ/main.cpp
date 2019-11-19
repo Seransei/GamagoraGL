@@ -22,6 +22,7 @@
 
 GLFWwindow* window;
 int width, height;
+int frameWidth = 500, frameHeight = 500;
 
 double cursorX, cursorY;
 
@@ -292,11 +293,11 @@ int main(void)
 
 	GLuint frameColorTextureID;
 	glCreateTextures(GL_TEXTURE_2D, 1, &frameColorTextureID);
-	glTextureStorage2D(frameColorTextureID, 1, GL_RGB8, 100, 100);
+	glTextureStorage2D(frameColorTextureID, 1, GL_RGB8, frameWidth, frameHeight);
 
 	GLuint frameDepthTextureID;
 	glCreateTextures(GL_TEXTURE_2D, 1, &frameDepthTextureID);
-	glTextureStorage2D(frameDepthTextureID, 1, GL_DEPTH_COMPONENT24, 100, 100);
+	glTextureStorage2D(frameDepthTextureID, 1, GL_DEPTH_COMPONENT16, frameWidth, frameHeight);
 
 	// Buffers
 	GLuint vbo, vao;
@@ -328,7 +329,7 @@ int main(void)
 	GLenum gl_color_attachment0[] = { (GLenum)GL_COLOR_ATTACHMENT0 };
 
 	GLuint frameBufferID;
-	glCreateFramebuffers(1, &frameBufferID);	
+	glCreateFramebuffers(1, &frameBufferID);
 	glNamedFramebufferTexture(frameBufferID, GL_COLOR_ATTACHMENT0, frameColorTextureID, 0);
 	glNamedFramebufferTexture(frameBufferID, GL_DEPTH_ATTACHMENT, frameDepthTextureID, 0);
 	glNamedFramebufferDrawBuffers(frameBufferID, 1, gl_color_attachment0);
@@ -407,16 +408,16 @@ int main(void)
 		glProgramUniformMatrix4fv(program, uniformPers, 1, GL_FALSE, &perspective[0][0]);
 		glProgramUniformMatrix4fv(program, uniformTransform, 1, GL_FALSE, &transformMatrix[0][0]);
 
-		//--Dessine sur le framebuffer cache--
+		//----Dessine sur le framebuffer cache----
 		glBindFramebuffer(GL_DRAW_FRAMEBUFFER, frameBufferID);
 
-		glViewport(0, 0, 100, 100);
+		glViewport(0, 0, frameWidth, frameHeight);
 
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 		glBindTextureUnit(0, woodTextureID);
 		
-		glDrawArrays(GL_TRIANGLES, 0, triangles.size() * 3);
+		glDrawArrays(GL_TRIANGLES, 0, cubeVert.size());
 
 		//----Dessine a l'ecran----
 		glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
@@ -428,7 +429,7 @@ int main(void)
 
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-		glDrawArrays(GL_TRIANGLES, 0, triangles.size() * 3);
+		glDrawArrays(GL_TRIANGLES, 0, cubeVert.size());
 
 		glfwSwapBuffers(window);
 		glfwPollEvents();
