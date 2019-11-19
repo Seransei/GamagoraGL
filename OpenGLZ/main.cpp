@@ -320,9 +320,48 @@ int main(void)
 	glProgramUniform1i(program, uniformTexture, 0);
 
 	// Frame buffers
+	GLenum gl_color_attachment0[] = { (GLenum)GL_COLOR_ATTACHMENT0 };
+
 	GLuint frameBufferID = 1;
-	glCreateFramebuffers(1, &frameBufferID);
-	glNamedFramebufferDrawBuffers(frameBufferID, 1, );
+	glCreateFramebuffers(1, &frameBufferID);	
+	glNamedFramebufferTexture(frameBufferID, GL_COLOR_ATTACHMENT0, textureID, 0);
+	glNamedFramebufferDrawBuffers(frameBufferID, 1, gl_color_attachment0);
+	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, frameBufferID);
+
+	GLenum fbStatus = glCheckNamedFramebufferStatus(frameBufferID, GL_FRAMEBUFFER);
+
+	std::cout << fbStatus << std::endl;
+
+	switch (fbStatus)
+	{
+	case GL_FRAMEBUFFER_UNDEFINED:
+		std::cout << 1 << std::endl;
+		break;
+	case GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT:
+		std::cout << 2 << std::endl;
+		break;
+	case GL_FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT :
+		std::cout << 3 << std::endl;
+		break;
+	case GL_FRAMEBUFFER_INCOMPLETE_DRAW_BUFFER :
+		std::cout << 4 << std::endl;
+		break;
+	case GL_FRAMEBUFFER_INCOMPLETE_READ_BUFFER :
+		std::cout << 5 << std::endl;
+		break;
+	case GL_FRAMEBUFFER_UNSUPPORTED :
+		std::cout << 6 << std::endl;
+		break;
+	case GL_FRAMEBUFFER_INCOMPLETE_MULTISAMPLE :
+		std::cout << 7 << std::endl;
+		break;
+	case GL_FRAMEBUFFER_INCOMPLETE_LAYER_TARGETS:
+		std::cout << 8 << std::endl;
+		break;
+	default:
+		std::cout << 9 << std::endl;
+		break;
+	}
 
 	glfwGetCursorPos(window, &cursorX, &cursorY);//update cursor pos
 	glPointSize(2.f);
