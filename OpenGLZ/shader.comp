@@ -1,0 +1,40 @@
+#version 450
+
+layout(local_size_x = 32) in;
+
+uniform float dt;
+
+struct Particule
+{
+	vec4 position;
+	vec4 color;
+	vec4 speed;
+};
+
+layout(std430, binding = 0) buffer parts
+{
+	Particule particules[];
+};
+
+vec3 wrapAround(vec3 pos)
+{
+	if(pos.x > 1.f) pos.x = -1.f;
+	if(pos.y > 1.f) pos.y = -1.f;
+	if(pos.z > 1.f) pos.z = -1.f;
+
+	if(pos.x < -1.f) pos.x = 1.f;
+	if(pos.y < -1.f) pos.y = 1.f;
+	if(pos.z < -1.f) pos.z = 1.f;
+
+	return pos;
+};
+
+void main()
+{
+	float g = -9.81f;
+	vec3 accel = particules[gl_GlobalInvocationID.x].position.w * g * vec3(0.f, 0.01f, 0.f);
+	particules[gl_GlobalInvocationID.x].speed.xyz += accel * dt;
+	particules[gl_GlobalInvocationID.x].position.xyz += particules[gl_GlobalInvocationID.x].speed.xyz * dt;
+
+	particules[gl_GlobalInvocationID.x].position.xyz = wrapAround(particules[gl_GlobalInvocationID.x].position.xyz);
+};

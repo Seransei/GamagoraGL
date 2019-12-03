@@ -23,6 +23,7 @@
 GLFWwindow* window;
 int width, height;
 int frameWidth = 500, frameHeight = 500;
+int nParticules = 10;
 
 double 
 	oldCursorX, oldCursorY,
@@ -36,7 +37,7 @@ float
 glm::vec3 camPos = glm::vec3(0.f, 0.f, radius);
 glm::mat4 
 	lookAt = glm::mat4(1.0),
-	perspective = glm::perspective(M_PI / 2, 1.f, 1.f, 10000.f);
+	perspective = glm::perspective(M_PI / 2, 1.f, 0.1f, 1000.f);
 
 //----TRANSLATE----
 float
@@ -47,9 +48,9 @@ glm::mat4 translateMatrix = glm::mat4(1.0);
 
 //----SCALE----
 float
-	scaleX = 10.f,
-	scaleY = 10.f,
-	scaleZ = 10.f;
+	scaleX = 40.f,
+	scaleY = 40.f,
+	scaleZ = 40.f;
 glm::mat4 scaleMatrix = glm::mat4(1.0);
 
 //----ROTATE----
@@ -89,9 +90,9 @@ static void cursor_position_callback(GLFWwindow* window, double xpos, double ypo
 
 /* PARTICULES */
 struct Particule {
-	glm::vec3 position;
-	glm::vec3 color;
-	glm::vec3 speed;
+	glm::vec4 position;
+	glm::vec4 color;
+	glm::vec4 speed;
 };
 
 /* POINTS */
@@ -106,24 +107,31 @@ std::vector<Particule> MakeParticules(const int n)
 	std::default_random_engine generator;
 	std::uniform_real_distribution<float> distribution01(0, 1);
 	std::uniform_real_distribution<float> distributionWorld(-1, 1);
+	std::uniform_real_distribution<float> distributionMass(10, 100);
 
 	std::vector<Particule> p;
 	p.reserve(n);
 
 	for(int i = 0; i < n; i++)
 	{
+		float col = distribution01(generator);
 		p.push_back(Particule{
-				{
-				distributionWorld(generator),
-				distributionWorld(generator),
-				distributionWorld(generator)
+				{ // pos
+					distributionWorld(generator),
+					distributionWorld(generator),
+					distributionWorld(generator),
+					distribution01(generator) * 100 // mass
+				}, 
+				{ // color
+					col, col, col,
+					1.f
 				},
-				{
-				distribution01(generator),
-				distribution01(generator),
-				distribution01(generator)
+				{ // speed
+					0.f, 
+					0.f,
+					0.f,
+					1.f
 				},
-				{0.f, 0.f, 0.f}
 				});
 	}
 
@@ -198,6 +206,18 @@ void APIENTRY opengl_error_callback(GLenum source,
 	std::cout << message << std::endl;
 }
 
+glm::vec3 wrapAround(glm::vec3 pos)
+{
+	if (pos.x > 1.f) pos.x = -1.f;
+	if (pos.y > 1.f) pos.y = -1.f;
+	if (pos.z > 1.f) pos.z = -1.f;
+
+	if (pos.x < -1.f) pos.x = 1.f;
+	if (pos.y < -1.f) pos.y = 1.f;
+	if (pos.z < -1.f) pos.z = 1.f;
+
+	return pos;
+};
 
 int main(void)
 {
@@ -220,7 +240,6 @@ int main(void)
 
 	glfwSetKeyCallback(window, key_callback);
 	glfwMakeContextCurrent(window);
-	glfwSwapInterval(1);
 	// NOTE: OpenGL error checks have been omitted for brevity
 
 	if(!gladLoadGL()) {
@@ -234,15 +253,18 @@ int main(void)
 	// Shader
 	const auto vertex = MakeShader(GL_VERTEX_SHADER, "shader.vert");
 	const auto fragment = MakeShader(GL_FRAGMENT_SHADER, "shader.frag");
+	const auto compute = MakeShader(GL_COMPUTE_SHADER, "shader.comp");
 
-	const auto program = AttachAndLink({vertex, fragment});
+	const auto programDisplay = AttachAndLink({vertex, fragment});
+	const auto programCompute = AttachAndLink({ compute });
 
-	glUseProgram(program);
+	glUseProgram(programDisplay);
 
 	// Objects
 	std::vector<Triangle> triangles = ReadStl("logo.stl");
 
-	std::vector<Vertex> points
+	// - Cube
+	std::vector<Vertex> cubePoints
 	{
 		{
 			{0, 0, 0},
@@ -269,17 +291,13 @@ int main(void)
 			{0, 1}
 		}
 	};
-
 	std::vector<glm::vec3> verticesOBJ;
 	std::vector<glm::vec2> uvsOBJ;
 	std::vector<glm::vec3> normalsOBJ;
 	const char* filename = "cube.obj";
-	loadOBJ(filename, verticesOBJ, uvsOBJ, normalsOBJ);
-	
+	loadOBJ(filename, verticesOBJ, uvsOBJ, normalsOBJ);	
 	std::vector<Vertex> cubeVert;
-
 	std::cout << verticesOBJ.size() << " " << uvsOBJ.size() << std::endl;
-
 	for(unsigned int i = 0; i < verticesOBJ.size(); i++)
 	{
 		cubeVert.push_back({
@@ -287,6 +305,11 @@ int main(void)
 			uvsOBJ[i]
 			});
 	}
+	// - End Cube
+
+	// - Particules
+	std::vector<Particule> particules = MakeParticules(nParticules);
+	// - End Particules
 
 	// Textures
 	Image bmp = LoadImage("wood.bmp");
@@ -310,23 +333,22 @@ int main(void)
 
 	glBindVertexArray(vao);
 	glBindBuffer(GL_ARRAY_BUFFER, vbo);
-	glBufferData(GL_ARRAY_BUFFER, cubeVert.size() * sizeof(Vertex), cubeVert.data(), GL_STATIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, particules.size() * sizeof(Particule), particules.data(), GL_STATIC_DRAW);
 
 	// Bindings
-	const auto indexPos = glGetAttribLocation(program, "position");
-	glVertexAttribPointer(indexPos, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), nullptr);
+	const auto indexPos = glGetAttribLocation(programDisplay, "position");
+	glVertexAttribPointer(indexPos, 3, GL_FLOAT, GL_FALSE, sizeof(Particule), nullptr);
 	glEnableVertexAttribArray(indexPos);
 
-
-	const auto indexUV = glGetAttribLocation(program, "uv");
-	glVertexAttribPointer(indexUV, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)12);
-	glEnableVertexAttribArray(indexUV);
+	const auto indexCol = glGetAttribLocation(programDisplay, "color");
+	glVertexAttribPointer(indexCol, 4, GL_FLOAT, GL_FALSE, sizeof(Particule), (void*)16);
+	glEnableVertexAttribArray(indexCol);
 
 	// Uniforms
-	int uniformLookAt = glGetUniformLocation(program, "lookAt");
-	int uniformPers = glGetUniformLocation(program, "perspective");
-	int uniformTransform = glGetUniformLocation(program, "transformMatrix");
-	int uniformTexture = glGetUniformLocation(program, "text");
+	int uniformLookAt = glGetUniformLocation(programDisplay, "lookAt");
+	int uniformPers = glGetUniformLocation(programDisplay, "perspective");
+	int uniformTransform = glGetUniformLocation(programDisplay, "transformMatrix");
+	int uniformDt = glGetUniformLocation(programCompute, "dt");
 
 	// Frame buffers
 	GLenum gl_color_attachment0[] = { GL_COLOR_ATTACHMENT0 };
@@ -378,12 +400,34 @@ int main(void)
 	glfwGetCursorPos(window, &cursorX, &cursorY);//update cursor pos
 	glPointSize(2.f);
 	glEnable(GL_DEPTH_TEST);
+
+	float time = glfwGetTime();
+	int frame = 0;
+	float timeSum = 0;
 	while (!glfwWindowShouldClose(window))
 	{
+		auto frameTime = glfwGetTime();
+		auto dt = frameTime - time;
+		timeSum += dt;
+		if (frame == 1000) 
+		{
+			std::cout << 1 / (timeSum / 1000) << std::endl;
+			frame = 0;
+			timeSum = 0;
+		}
+
+		// GPU compute shaders
+		/*glUseProgram(programCompute);
+		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, vbo);
+		glDispatchCompute(nParticules / 32, 1, 1);
+		glMemoryBarrier(GL_ALL_BARRIER_BITS);*/
+
+		glBindVertexArray(vao);
+		glUseProgram(programDisplay);
+
 		glfwGetFramebufferSize(window, &width, &height);
 		glViewport(0, 0, width, height);
-		glBindTextureUnit(0, woodTextureID);
-		glClearColor(0.2f, 0.2f, 0.2f, 1.0f);
+		glClearColor(0.01f, 0.01f, 0.01f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 		// Camera
@@ -393,45 +437,21 @@ int main(void)
 			//-------------------
 
 			//--Camera rotation--
-			oldCursorX = cursorX,
-				oldCursorY = cursorY;
+			oldCursorX = cursorX;
+			oldCursorY = cursorY;
 			glfwGetCursorPos(window, &cursorX, &cursorY);//update cursor pos
 
 			theta += (oldCursorX - cursorX) * 0.001f;
 			phi += (oldCursorY - cursorY) * 0.001f;
 
 			camPos = glm::vec3(radius * sin(phi) * cos(theta), radius * cos(phi), radius * sin(phi) * sin(theta));
-			lookAt = glm::lookAt(camPos, glm::vec3(0, 0, 0), glm::vec3(0, 1, 0));
-
-			glProgramUniformMatrix4fv(program, uniformLookAt, 1, GL_FALSE, &lookAt[0][0]);
-			glProgramUniformMatrix4fv(program, uniformPers, 1, GL_FALSE, &perspective[0][0]);
+			lookAt = glm::lookAt(camPos, glm::vec3(0.f, 0.f, 0.f), glm::vec3(0.f, 1.f, 0.f));
 		}
 
 		// Object 1
 		{
 			//--Object transformations--
-			translateMatrix = glm::translate(glm::vec3(dx - 30, dy, dz));
-
-			scaleMatrix = glm::scale(glm::vec3(scaleX + 2, scaleY + 2, scaleZ + 2));
-
-			rotMatX = glm::rotate(rotX, glm::vec3(1, 0, 0));
-			rotMatY = glm::rotate(rotY, glm::vec3(0, 1, 0));
-			rotMatZ = glm::rotate(rotZ, glm::vec3(0, 0, 1));
-			rotationMatrix = rotMatX * rotMatY * rotMatZ;
-
-			transformMatrix = rotationMatrix * translateMatrix * scaleMatrix;
-			//--------------------------
-
-			glProgramUniformMatrix4fv(program, uniformTransform, 1, GL_FALSE, &transformMatrix[0][0]);
-			glProgramUniform1i(program, uniformTexture, 0);
-
-			glDrawArrays(GL_TRIANGLES, 0, cubeVert.size());
-		}
-
-		// Object 2
-		{		
-			//--Object transformations--
-			translateMatrix = glm::translate(glm::vec3(dx + 25, dy, dz));
+			translateMatrix = glm::translate(glm::vec3(dx, dy, dz));
 
 			scaleMatrix = glm::scale(glm::vec3(scaleX, scaleY, scaleZ));
 
@@ -443,11 +463,29 @@ int main(void)
 			transformMatrix = rotationMatrix * translateMatrix * scaleMatrix;
 			//--------------------------
 
-			glProgramUniformMatrix4fv(program, uniformTransform, 1, GL_FALSE, &transformMatrix[0][0]);
-			glProgramUniform1i(program, uniformTexture, 0);
+			// Compute with CPU
+			float g = -9.81f;
+			for (int i = 0; i < nParticules; i++) 
+			{
+				glm::vec3 accel = particules[i].position.w * g * glm::vec3(0.f, 0.1f, 0.f);
+				particules[i].speed += glm::vec4(accel * float(dt), particules[i].speed.w);
+				particules[i].position += glm::vec4(particules[i].speed.x * dt, particules[i].speed.y * dt, particules[i].speed.z * dt, 0.f);
+				particules[i].position = glm::vec4(wrapAround(particules[i].position), particules[i].position.w);
+			}
+			glBufferSubData(GL_ARRAY_BUFFER, 0, nParticules * sizeof(Particule), particules.data());
 
-			glDrawArrays(GL_TRIANGLES, 0, cubeVert.size());
 		}
+
+		glProgramUniformMatrix4fv(programDisplay, uniformLookAt, 1, GL_FALSE, &lookAt[0][0]);
+		glProgramUniformMatrix4fv(programDisplay, uniformPers, 1, GL_FALSE, &perspective[0][0]);
+		glProgramUniformMatrix4fv(programDisplay, uniformTransform, 1, GL_FALSE, &transformMatrix[0][0]);
+		glProgramUniform1f(programCompute, uniformDt, dt);
+
+		time = frameTime;
+		frame++;
+
+
+		glDrawArrays(GL_POINTS, 0, particules.size());
 
 		glfwSwapBuffers(window);
 		glfwPollEvents();
